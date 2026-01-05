@@ -1,0 +1,8 @@
+onlyBuiltDependencies:
+  - '@nestjs/core'
+  - '@parcel/watcher'
+  - '@prisma/engines'
+  - argon2
+  - esbuild
+  - prisma
+  - unrs-resolver
