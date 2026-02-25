@@ -3,8 +3,8 @@
     <UPageCard class="w-full max-w-md">
       <UAuthForm
         :schema="schema"
-        title="Login"
-        description="Enter your credentials to access your account."
+        title="Register"
+        description="Create an account to access your account."
         icon="i-lucide-user"
         :fields="fields"
         :providers="providers"
@@ -25,10 +25,24 @@ definePageMeta({
   },
 });
 
-const { signIn } = useAuth();
+const { signUp } = useAuth();
 const toast = useToast();
 
 const fields: AuthFormField[] = [
+  {
+    name: "name",
+    type: "text",
+    label: "Name",
+    placeholder: "Enter your name",
+    required: true,
+  },
+  {
+    name: "username",
+    type: "text",
+    label: "Username",
+    placeholder: "Enter your username",
+    required: true,
+  },
   {
     name: "email",
     type: "email",
@@ -41,6 +55,13 @@ const fields: AuthFormField[] = [
     label: "Password",
     type: "password",
     placeholder: "Enter your password",
+    required: true,
+  },
+  {
+    name: "password_confirmation",
+    label: "Confirm Password",
+    type: "password",
+    placeholder: "Confirm your password",
     required: true,
   },
   // {
@@ -69,12 +90,20 @@ const providers = [
   },
 ];
 
-const schema = z.object({
-  email: z.email("Invalid email"),
-  password: z
-    .string("Password is required")
-    .min(8, "Must be at least 8 characters"),
-});
+const schema = z
+  .object({
+    name: z.string().min(1, "Name is required"),
+    username: z.string().min(1, "Username is required"),
+    email: z.string().email("Invalid email"),
+    password: z.string().min(8, "Must be at least 8 characters"),
+    password_confirmation: z
+      .string()
+      .min(1, "Password confirmation is required"),
+  })
+  .refine((data) => data.password === data.password_confirmation, {
+    message: "Passwords do not match",
+    path: ["password_confirmation"], // Вказуємо, на якому полі показувати помилку
+  });
 
 type Schema = z.output<typeof schema>;
 
@@ -83,19 +112,26 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
     // 1. Провайдер має називатися 'local' (якщо ти так вказав у nuxt.config)
     // 2. redirect: true автоматично перекине юзера на головну після успіху
     const credentials = {
+      name: payload.data.name,
+      username: payload.data.username,
       email: payload.data.email,
       password: payload.data.password,
+      password_confirmation: payload.data.password_confirmation,
     };
-    await signIn(credentials, { callbackUrl: "/", redirect: true });
-
-    toast.add({ title: "Успіх", description: "Ви увійшли в систему" });
-  } catch (error: any) {
-    // Sidebase викидає помилку, якщо статус відповіді не 2xx
-    toast.add({
-      title: "Помилка входу",
-      description: "Невірний email або пароль",
-      color: "error",
+    await signUp(credentials, {
+      callbackUrl: "/login",
+      redirect: true,
+      preventLoginFlow: true,
     });
+
+    toast.add({ title: "Успіх", description: "Ви успішно зареєструвались" });
+  } catch (error: any) {
+    // // Sidebase викидає помилку, якщо статус відповіді не 2xx
+    // toast.add({
+    //   title: "Помилка входу",
+    //   description: "Невірний email або пароль",
+    //   color: "error",
+    // });
   }
 }
 </script>

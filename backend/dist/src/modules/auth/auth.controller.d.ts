@@ -9,22 +9,22 @@ export declare class AuthController {
     private readonly authService;
     constructor(authService: AuthService);
     register(dto: RegisterDto): Promise<{
-        id: string;
-        username: string;
         name: string;
+        username: string;
         email: string;
         password: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
     }>;
     login(req: RequestWithUser): {
         access_token: string;
         user: {
-            id: string;
-            username: string;
             name: string;
+            username: string;
             email: string;
             password: string;
+            id: string;
             createdAt: Date;
             updatedAt: Date;
         };

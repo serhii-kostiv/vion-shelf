@@ -4,6 +4,32 @@ export default defineNuxtConfig({
   devtools: { enabled: true },
   modules: ["@nuxt/ui", "@sidebase/nuxt-auth"],
   css: ["~/assets/css/main.css"],
+
+  vite: {
+    server: {
+      hmr: {
+        protocol: "ws",
+        host: "localhost",
+      },
+    },
+  },
+
+  nitro: {
+    devProxy: {
+      "/__nuxt_devtools__": {
+        target: "http://localhost:3000/__nuxt_devtools__",
+        changeOrigin: true,
+      },
+    },
+  },
+
+  hooks: {
+    "vite:extendConfig"(config) {
+      config.server = config.server || {};
+      config.server.fs = config.server.fs || {};
+      config.server.fs.allow = [".."];
+    },
+  },
   auth: {
     // 1. Вказуємо тип провайдера
     provider: {

@@ -14,12 +14,9 @@
         <!-- <AppMenu /> -->
       </div>
 
-      <!-- <ClientOnly>
-        <ColorModeButton />
-      </ClientOnly> -->
-
       <div class="flex items-center space-x-4">
         <ClientOnly>
+          <UColorModeButton />
           <template v-if="isAuth">
             <NuxtLink
               to="/profile"

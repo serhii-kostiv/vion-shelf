@@ -11,31 +11,31 @@ export declare class AuthService {
     hashPassword(password: string): Promise<string>;
     verifyPassword(password: string, hash: string): Promise<boolean>;
     register(dto: RegisterDto): Promise<{
-        id: string;
-        username: string;
         name: string;
+        username: string;
         email: string;
         password: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
     }>;
     validateUser(email: string, password: string): Promise<{
-        id: string;
-        username: string;
         name: string;
+        username: string;
         email: string;
         password: string;
+        id: string;
         createdAt: Date;
         updatedAt: Date;
     } | null>;
     login(user: User): {
         access_token: string;
         user: {
-            id: string;
-            username: string;
             name: string;
+            username: string;
             email: string;
             password: string;
+            id: string;
             createdAt: Date;
             updatedAt: Date;
         };
