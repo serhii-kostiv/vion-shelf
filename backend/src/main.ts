@@ -17,7 +17,15 @@ async function bootstrap() {
     exposedHeaders: ['set-cookie'],
   });
 
-  await app.listen(config.getOrThrow<number>('APPLICATION_PORT'));
+  const port = config.getOrThrow<number>('APPLICATION_PORT');
+  await app.listen(port);
+
+  console.log('🚀 Application is starting...');
+  console.log(`✅ Server is running on http://localhost:${port}`);
+  console.log(
+    `🌐 CORS enabled for: ${config.getOrThrow<string>('ALLOWED_ORIGIN')}`,
+  );
+  console.log('📝 Global validation pipe enabled');
 }
 
 void bootstrap();
