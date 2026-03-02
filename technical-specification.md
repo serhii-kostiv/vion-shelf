@@ -99,10 +99,6 @@ VionShelf — це вебдодаток для каталогізації та �
 - **POST /auth/refresh**
   - Action: Читає cookie, валідує хеш у БД, видає нову пару токенів (Rotation)
 
-- **GET /auth/me**
-  - Header: `Authorization: Bearer <token>`
-  - Action: Повертає профіль (без пароля та хешів)
-
 ### 4.2. Collection Module
 
 - **GET /collections** — Отримати всі свої колекції (потребує авторизації)

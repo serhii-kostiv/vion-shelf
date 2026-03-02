@@ -9,10 +9,6 @@ export const User = createParamDecorator(
     const request = ctx.switchToHttp().getRequest<RequestWithUser>();
     const user = request.user;
 
-    console.log('User decorator - full user:', user);
-    console.log('User decorator - requested field:', data);
-    console.log('User decorator - returning:', data ? user?.[data] : user);
-
     return data ? user?.[data] : user;
   },
 );

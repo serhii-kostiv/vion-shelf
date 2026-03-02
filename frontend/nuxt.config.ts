@@ -23,13 +23,6 @@ export default defineNuxtConfig({
     },
   },
 
-  hooks: {
-    "vite:extendConfig"(config) {
-      config.server = config.server || {};
-      config.server.fs = config.server.fs || {};
-      config.server.fs.allow = [".."];
-    },
-  },
   auth: {
     // 1. Вказуємо тип провайдера
     provider: {
@@ -42,16 +35,16 @@ export default defineNuxtConfig({
         signUp: { path: "/auth/register", method: "post" },
         // Дуже важливо: цей метод викликається автоматично після логіну
         // або при оновленні сторінки, щоб отримати дані юзера
-        getSession: { path: "/auth/profile", method: "get" },
+        getSession: { path: "/users/profile", method: "get" },
       },
 
       // 3. Налаштування токена
       token: {
-        signInResponseTokenPointer: "/access_token", // де в JSON від NestJS лежить токен
+        signInResponseTokenPointer: "/access_token",
         type: "Bearer",
         cookieName: "auth.token",
         headerName: "Authorization",
-        maxAgeInSeconds: 86400, // 24 годин (має збігатися з expiresIn у NestJS)
+        maxAgeInSeconds: 3600, // 1 година
       },
 
       // 4. Налаштування сесії (дані юзера)

@@ -86,7 +86,12 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
       email: payload.data.email,
       password: payload.data.password,
     };
-    await signIn(credentials, { callbackUrl: "/", redirect: true });
+    await signIn(credentials, {
+      callbackUrl: "/",
+      redirect: true,
+      // Важливо для отримання cookies з refresh токеном
+      external: false,
+    });
 
     toast.add({ title: "Успіх", description: "Ви увійшли в систему" });
   } catch (error: any) {

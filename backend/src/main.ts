@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
+import cookieParser from 'cookie-parser';
 
 import { AppModule } from '@/app.module';
 import { ValidationPipe } from '@nestjs/common';
@@ -9,6 +10,7 @@ async function bootstrap() {
 
   const config = app.get(ConfigService);
 
+  app.use(cookieParser());
   app.useGlobalPipes(new ValidationPipe({ transform: true }));
 
   app.enableCors({

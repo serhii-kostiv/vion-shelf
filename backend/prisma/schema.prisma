@@ -7,20 +7,36 @@ datasource db {
 }
 
 model User {
-  id          String       @id @default(uuid())
-  username    String       @unique
-  name        String
-  email       String       @unique
-  password    String
-  avatarUrl   String?      @map("avatar_url")
-  bio         String?      @db.Text
-  createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt   DateTime     @updatedAt @map("updated_at")
-  collections Collection[] @relation("UserCollections")
-  likes       Like[]
-  comments    Comment[]
+  id            String         @id @default(uuid())
+  username      String         @unique
+  name          String
+  email         String         @unique
+  password      String
+  avatarUrl     String?        @map("avatar_url")
+  bio           String?        @db.Text
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  collections   Collection[]   @relation("UserCollections")
+  likes         Like[]
+  comments      Comment[]
+  refreshTokens RefreshToken[]
 
   @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?   @map("user_agent")
+  ip        String?
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
 }
 
 model Collection {
@@ -57,12 +73,12 @@ model CollectionItem {
   notes    String?    @db.Text
 
   // Зв'язок з колекцією
-  collectionId String      @map("collection_id")
-  collection   Collection  @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  collectionId String     @map("collection_id")
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
 
   // Глобальні дані про медіа (автор, постер і тд)
-  mediaItemId String     @map("media_item_id")
-  mediaItem   MediaItem  @relation(fields: [mediaItemId], references: [id])
+  mediaItemId String    @map("media_item_id")
+  mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -78,7 +94,7 @@ model MediaItem {
   externalId String   @unique @map("external_id") // ID з Google Books, IMDb тощо
   type       Category
   title      String
-  posterUrl  String? @map("poster_url")
+  posterUrl  String?  @map("poster_url")
   metadata   Json // JSONB для гнучких даних (автори, жанри)
 
   items CollectionItem[] // Зворотний зв'язок
