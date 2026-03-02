@@ -13,6 +13,11 @@ dev-backend:
 	@echo "▶️  Запуск backend..."
 	@cd backend && pnpm run start:dev
 
+# Запуск db-studio
+db-studio:
+	@echo " Запуск db:studio..."
+	@cd backend && pnpm run db:studio
+
 # Запуск Docker контейнерів для backend
 docker-up:
 	@echo "🐳 Запуск Docker контейнерів..."
@@ -41,6 +46,7 @@ help:
 	@echo "  make dev           - Запуск frontend та backend"
 	@echo "  make dev-frontend  - Запуск тільки frontend"
 	@echo "  make dev-backend   - Запуск тільки backend"
+	@echo "  make db-studio     - Запуст db:studio"
 	@echo "  make docker-up     - Запуск Docker контейнерів"
 	@echo "  make docker-down   - Зупинка Docker контейнерів"
 	@echo "  make all           - Запуск Docker + Frontend + Backend"
