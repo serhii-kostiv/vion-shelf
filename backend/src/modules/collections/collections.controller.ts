@@ -44,8 +44,16 @@ export class CollectionsController {
   // POST /collections/:id/items - Додати елемент до колекції
   @Post(':id/items')
   @UseGuards(JWTGuard)
-  async addItem(@Param('id') collectionId: string, @Body() dto: AddItemDto) {
-    return this.collectionsService.addItemToCollection(collectionId, dto);
+  async addItem(
+    @User('id') userId: string,
+    @Param('id') collectionId: string,
+    @Body() dto: AddItemDto,
+  ) {
+    return this.collectionsService.addItemToCollection(
+      userId,
+      collectionId,
+      dto,
+    );
   }
 
   // PATCH /collections/items/:id - Оновити елемент

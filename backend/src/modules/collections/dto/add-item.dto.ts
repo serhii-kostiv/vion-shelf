@@ -31,7 +31,8 @@ export class AddItemDto {
 
   // Персональні дані користувача (для CollectionItem)
   @IsEnum(ItemStatus)
-  status: ItemStatus;
+  @IsOptional()
+  status?: ItemStatus;
 
   @IsInt()
   @Min(1)

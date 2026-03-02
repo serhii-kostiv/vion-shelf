@@ -1,7 +1,13 @@
 import { PrismaService } from '@/core/prisma/prisma.service';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  ConflictException,
+} from '@nestjs/common';
 import { CreateCollectionDto } from './dto/create-collection.dto';
 import { AddItemDto } from './dto/add-item.dto';
+import { ItemStatus } from '@prisma/client';
 
 @Injectable()
 export class CollectionsService {
@@ -45,7 +51,15 @@ export class CollectionsService {
   async getCollectionBySlug(slug: string) {
     return await this.prisma.collection.findUnique({
       where: { slug },
-      include: {
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        slug: true,
+        category: true,
+        isPublic: true,
+        createdAt: true,
+        updatedAt: true,
         user: {
           select: {
             id: true,
@@ -55,8 +69,25 @@ export class CollectionsService {
           },
         },
         items: {
-          include: {
-            mediaItem: true, // Джойнимо глобальні дані
+          select: {
+            id: true,
+            status: true,
+            rating: true,
+            progress: true,
+            notes: true,
+            createdAt: true,
+            updatedAt: true,
+            mediaItem: {
+              select: {
+                id: true,
+                externalId: true,
+                type: true,
+                title: true,
+                posterUrl: true,
+                metadata: true,
+                // НЕ включаємо items (зворотній зв'язок)
+              },
+            },
           },
           orderBy: { createdAt: 'desc' },
         },
@@ -65,41 +96,69 @@ export class CollectionsService {
   }
 
   // Додати елемент до колекції (Upsert Pattern)
-  async addItemToCollection(collectionId: string, dto: AddItemDto) {
-    // КРОК 1: Шукаємо чи існує MediaItem
-    let mediaItem = await this.prisma.mediaItem.findUnique({
-      where: { externalId: dto.externalId },
-    });
+  async addItemToCollection(
+    userId: string,
+    collectionId: string,
+    dto: AddItemDto,
+  ) {
+    return await this.prisma.$transaction(async (tx) => {
+      // КРОК 1: Перевірка власності колекції
+      const collection = await tx.collection.findUnique({
+        where: { id: collectionId },
+      });
 
-    // КРОК 2: Якщо немає - створюємо
-    if (!mediaItem) {
-      mediaItem = await this.prisma.mediaItem.create({
-        data: {
+      if (!collection) {
+        throw new NotFoundException('Collection not found');
+      }
+
+      if (collection.userId !== userId) {
+        throw new ForbiddenException('You do not own this collection');
+      }
+
+      // КРОК 2: Upsert MediaItem (знайти або створити)
+      const mediaItem = await tx.mediaItem.upsert({
+        where: { externalId: dto.externalId },
+        create: {
           externalId: dto.externalId,
           type: dto.type,
           title: dto.title,
           posterUrl: dto.posterUrl,
           metadata: dto.metadata ?? {},
         },
+        update: {}, // Не оновлюємо якщо вже існує
       });
-    }
 
-    // КРОК 3: Створюємо CollectionItem (персональний запис)
-    const collectionItem = await this.prisma.collectionItem.create({
-      data: {
-        collectionId: collectionId,
-        mediaItemId: mediaItem.id,
-        status: dto.status,
-        rating: dto.rating,
-        progress: dto.progress ?? 0,
-        notes: dto.notes,
-      },
-      include: {
-        mediaItem: true, // Повертаємо з повною інфою
-      },
+      // КРОК 3: Перевірка дублікату
+      const existing = await tx.collectionItem.findUnique({
+        where: {
+          collectionId_mediaItemId: {
+            collectionId,
+            mediaItemId: mediaItem.id,
+          },
+        },
+      });
+
+      if (existing) {
+        throw new ConflictException('Item already in this collection');
+      }
+
+      // КРОК 4: Створення CollectionItem (персональний запис)
+      const collectionItem = await tx.collectionItem.create({
+        data: {
+          collectionId,
+          mediaItemId: mediaItem.id,
+          status: dto.status ?? ItemStatus.PLANNED,
+          rating: dto.rating,
+          progress: dto.progress ?? 0,
+          notes: dto.notes,
+        },
+        include: {
+          mediaItem: true, // Повертаємо з повною інфою
+        },
+      });
+
+      return collectionItem;
     });
-
-    return collectionItem;
   }
 
   // Оновити прогрес елемента
