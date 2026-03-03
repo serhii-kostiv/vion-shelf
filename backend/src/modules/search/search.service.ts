@@ -26,6 +26,11 @@ export class SearchService {
     // Strategy pattern: select provider based on type and provider parameter
     if (provider !== 'default') {
       // Use explicitly specified provider
+      if (!type) {
+        throw new BadRequestException(
+          'Type is required when using a specific provider',
+        );
+      }
       return this.searchWithProvider(query, type, provider);
     }
 

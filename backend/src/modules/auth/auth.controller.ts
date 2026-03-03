@@ -100,12 +100,11 @@ export class AuthController {
   ) {
     const oldToken: unknown = req.cookies?.['refresh_token'];
 
-    const { accessToken, refreshToken, user } =
-      await this.authService.refreshSession(
-        oldToken as string,
-        req.headers['user-agent'],
-        req.ip,
-      );
+    const { accessToken, refreshToken } = await this.authService.refreshSession(
+      oldToken as string,
+      req.headers['user-agent'],
+      req.ip,
+    );
 
     res.cookie('refresh_token', refreshToken, {
       httpOnly: true,
@@ -116,7 +115,6 @@ export class AuthController {
 
     return {
       access_token: accessToken,
-      user,
     };
   }
 }

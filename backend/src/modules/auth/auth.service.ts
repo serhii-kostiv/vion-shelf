@@ -250,7 +250,7 @@ export class AuthService {
    * @param refreshToken - Refresh token in format "id.rawToken"
    * @param userAgent - Optional user agent string
    * @param ip - Optional IP address
-   * @returns New access token, refresh token, and user data
+   * @returns New access token and refresh token
    * @throws UnauthorizedException if token is invalid, expired, or revoked
    */
   async refreshSession(
@@ -260,7 +260,6 @@ export class AuthService {
   ): Promise<{
     accessToken: string;
     refreshToken: string;
-    user: User;
   }> {
     // Parse token format "<id>.<rawToken>"
     const [id, rawToken] = refreshToken.split('.');
@@ -273,7 +272,9 @@ export class AuthService {
     // Fetch token from database
     const existing = await this.prismaService.refreshToken.findUnique({
       where: { id },
-      include: { user: true },
+      include: {
+        user: true,
+      },
     });
 
     // Validate token exists
@@ -331,7 +332,6 @@ export class AuthService {
     return {
       accessToken,
       refreshToken: newRefreshToken,
-      user,
     };
   }
 

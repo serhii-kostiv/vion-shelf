@@ -10,10 +10,11 @@ import { AppLoggerService } from '@/core/logging/logger.service';
  */
 @Injectable()
 export class HealthService {
+  private readonly logger = new AppLoggerService();
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly config: ConfigService,
-    private readonly logger: AppLoggerService,
   ) {
     this.logger.setContext(HealthService.name);
   }
