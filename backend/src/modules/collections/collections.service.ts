@@ -49,7 +49,7 @@ export class CollectionsService {
 
   // Отримати колекцію за slug з усіма елементами
   async getCollectionBySlug(slug: string) {
-    return await this.prisma.collection.findUnique({
+    const collection = await this.prisma.collection.findUnique({
       where: { slug },
       select: {
         id: true,
@@ -93,6 +93,12 @@ export class CollectionsService {
         },
       },
     });
+
+    if (!collection) {
+      throw new NotFoundException('Collection not found');
+    }
+
+    return collection;
   }
 
   // Додати елемент до колекції (Upsert Pattern)

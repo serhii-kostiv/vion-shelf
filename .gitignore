@@ -25,3 +25,6 @@ logs
 
 # Prisma
 /generated/prisma
+
+# Kiro
+.kiro/specs/
