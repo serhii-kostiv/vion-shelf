@@ -417,6 +417,63 @@ if (isUser(data)) {
 - Debounce/Throttle для частих подій
 - Індекси в БД для частих запитів
 
+## Git Commit Standards
+
+### Формат Коміту
+
+Всі коміти повинні починатися з номера таска у форматі `VION-XXX`:
+
+```
+VION-123: Add user authentication
+```
+
+Для декількох змін використовуй список:
+
+```
+VION-123: Add user authentication
+- Add JWT token generation
+- Add refresh token logic
+- Update auth guards
+```
+
+### Правила Комітів
+
+- **Обов'язковий префікс:** `VION-XXX` де XXX - номер таска
+- **Стислість:** Заголовок коміту короткий і лаконічний
+- **Список змін:** Якщо є декілька змін, додай їх списком через дефіс
+- **Зрозумілість:** Опис має чітко пояснювати що змінено
+- **Мова:** Англійська для commit message
+
+### Приклади
+
+✅ **Добре:**
+
+```
+VION-101: Add refresh token functionality
+- Implement token rotation
+- Add refresh endpoint
+- Update guards
+```
+
+```
+VION-102: Fix user registration validation
+```
+
+```
+VION-103: Update Prisma schema
+- Add indexes for performance
+- Convert to snake_case
+- Add refresh_tokens table
+```
+
+❌ **Погано:**
+
+```
+Add feature                    // Немає номера таска
+VION-101 Added a lot of changes to the authentication system and also fixed some bugs and updated documentation  // Занадто довго без структури
+fix bug                        // Немає номера таска, неінформативно
+```
+
 ## Code Review Checklist
 
 Перед commit перевір:
@@ -427,7 +484,7 @@ if (isUser(data)) {
 - [ ] Імена змінних/функцій описові
 - [ ] Обробка помилок присутня
 - [ ] TypeScript типи правильні (немає `any`)
-- [ ] Тести написані (якщо потрібно)
 - [ ] Коментарі додані для складної логіки
 - [ ] Безпека врахована (валідація, auth, тощо)
 - [ ] Performance врахований (pagination, caching, тощо)
+- [ ] Commit message має формат `VION-XXX` з коротким описом
