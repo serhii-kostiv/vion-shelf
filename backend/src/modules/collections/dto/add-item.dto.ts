@@ -1,4 +1,5 @@
-import { Category, ItemStatus } from '@prisma/client';
+import { ItemStatus, Category } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
   IsEnum,
   IsInt,
@@ -7,18 +8,21 @@ import {
   IsString,
   IsUrl,
   Max,
+  MaxLength,
   Min,
+  ValidateNested,
 } from 'class-validator';
 
-export class AddItemDto {
-  // Дані про медіа (для MediaItem)
+class MediaItemDataDto {
   @IsString()
+  @MaxLength(255)
   title: string;
 
   @IsEnum(Category)
   type: Category;
 
   @IsString()
+  @MaxLength(255)
   externalId: string;
 
   @IsUrl()
@@ -28,11 +32,12 @@ export class AddItemDto {
   @IsObject()
   @IsOptional()
   metadata?: object;
+}
 
-  // Персональні дані користувача (для CollectionItem)
+class CollectionItemDataDto {
   @IsEnum(ItemStatus)
   @IsOptional()
-  status?: ItemStatus;
+  status?: ItemStatus = ItemStatus.PLANNED;
 
   @IsInt()
   @Min(1)
@@ -43,9 +48,21 @@ export class AddItemDto {
   @IsInt()
   @Min(0)
   @IsOptional()
-  progress?: number;
+  progress?: number = 0;
 
   @IsString()
   @IsOptional()
+  @MaxLength(1000)
   notes?: string;
+}
+
+export class AddItemDto {
+  @ValidateNested()
+  @Type(() => MediaItemDataDto)
+  mediaItem: MediaItemDataDto;
+
+  @ValidateNested()
+  @Type(() => CollectionItemDataDto)
+  @IsOptional()
+  collectionItem?: CollectionItemDataDto;
 }

@@ -1,28 +1,34 @@
 import { PrismaService } from '@/core/prisma/prisma.service';
 import {
-  ForbiddenException,
   Injectable,
   NotFoundException,
   ConflictException,
 } from '@nestjs/common';
 import { CreateCollectionDto } from './dto/create-collection.dto';
+import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { AddItemDto } from './dto/add-item.dto';
-import { ItemStatus } from '@prisma/client';
+import { UpdateItemDto } from './dto/update-item.dto';
+import { ItemStatus, Prisma } from '@prisma/client';
+import { SlugUtil } from '@/common/utils/slug.util';
+import {
+  PaginationUtil,
+  PaginatedResult,
+  PaginationParams,
+} from '@/common/utils/pagination.util';
+import { AppLoggerService } from '@/core/logging/logger.service';
 
 @Injectable()
 export class CollectionsService {
+  private readonly logger = new AppLoggerService(CollectionsService.name);
+
   constructor(private readonly prisma: PrismaService) {}
 
   // Створення колекції
   async createCollection(userId: string, dto: CreateCollectionDto) {
-    // Генеруємо slug з назви + random string
-    const randomString = Math.random().toString(36).substring(2, 8);
-    const slug = `${dto.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/(^-|-$)/g, '')}-${randomString}`;
+    // Генеруємо slug з назви за допомогою SlugUtil
+    const slug = SlugUtil.generate(dto.title);
 
-    return await this.prisma.collection.create({
+    const collection = await this.prisma.collection.create({
       data: {
         title: dto.title,
         description: dto.description,
@@ -32,19 +38,65 @@ export class CollectionsService {
         userId: userId,
       },
     });
+
+    this.logger.log('Collection created', {
+      userId,
+      collectionId: collection.id,
+      title: collection.title,
+      category: collection.category,
+      isPublic: collection.isPublic,
+    });
+
+    return collection;
   }
 
-  // Отримати всі колекції користувача
-  async getUserCollections(userId: string) {
-    return await this.prisma.collection.findMany({
-      where: { userId },
-      include: {
-        _count: {
-          select: { items: true }, // Кількість елементів
+  // Отримати всі колекції користувача з пагінацією
+  async getUserCollections(
+    userId: string,
+    paginationParams: PaginationParams,
+  ): Promise<PaginatedResult<any>> {
+    const { page, limit } = paginationParams;
+    const skip = PaginationUtil.calculateSkip(page, limit);
+
+    // Паралельні запити для даних та підрахунку
+    const [collections, total] = await Promise.all([
+      this.prisma.collection.findMany({
+        where: { userId },
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          slug: true,
+          category: true,
+          isPublic: true,
+          createdAt: true,
+          updatedAt: true,
+          _count: {
+            select: { items: true }, // Кількість елементів
+          },
         },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.collection.count({
+        where: { userId },
+      }),
+    ]);
+
+    // Трансформуємо результат для додавання itemsCount
+    const collectionsWithCount = collections.map((collection) => ({
+      ...collection,
+      itemsCount: collection._count.items,
+      _count: undefined, // Видаляємо _count з відповіді
+    }));
+
+    return PaginationUtil.createResult(
+      collectionsWithCount,
+      page,
+      limit,
+      total,
+    );
   }
 
   // Отримати колекцію за slug з усіма елементами
@@ -91,6 +143,9 @@ export class CollectionsService {
           },
           orderBy: { createdAt: 'desc' },
         },
+        _count: {
+          select: { items: true },
+        },
       },
     });
 
@@ -98,87 +153,136 @@ export class CollectionsService {
       throw new NotFoundException('Collection not found');
     }
 
+    // Додаємо itemsCount до відповіді
+    return {
+      ...collection,
+      itemsCount: collection._count.items,
+      _count: undefined, // Видаляємо _count з відповіді
+    };
+  }
+
+  /**
+   * Update collection
+   * Ownership verification is handled by CollectionOwnershipGuard
+   */
+  async updateCollection(collectionId: string, dto: UpdateCollectionDto) {
+    // Оновлюємо колекцію (ownership вже перевірено guard'ом)
+    const collection = await this.prisma.collection.update({
+      where: { id: collectionId },
+      data: {
+        title: dto.title,
+        description: dto.description,
+        category: dto.category,
+        isPublic: dto.isPublic,
+      },
+      select: {
+        id: true,
+        title: true,
+        description: true,
+        slug: true,
+        category: true,
+        isPublic: true,
+        createdAt: true,
+        updatedAt: true,
+        userId: true,
+        _count: {
+          select: { items: true },
+        },
+      },
+    });
+
+    this.logger.log('Collection updated', {
+      userId: collection.userId,
+      collectionId: collection.id,
+      title: collection.title,
+      category: collection.category,
+      isPublic: collection.isPublic,
+    });
+
     return collection;
   }
 
-  // Додати елемент до колекції (Upsert Pattern)
-  async addItemToCollection(
-    userId: string,
-    collectionId: string,
-    dto: AddItemDto,
-  ) {
-    return await this.prisma.$transaction(async (tx) => {
-      // КРОК 1: Перевірка власності колекції
-      const collection = await tx.collection.findUnique({
-        where: { id: collectionId },
-      });
+  /**
+   * Add item to collection (Upsert Pattern)
+   * Ownership verification is handled by CollectionOwnershipGuard
+   */
+  async addItemToCollection(collectionId: string, dto: AddItemDto) {
+    const result = await this.prisma.$transaction(
+      async (tx) => {
+        // КРОК 1: Upsert MediaItem (знайти або створити)
+        const mediaItem = await tx.mediaItem.upsert({
+          where: { externalId: dto.mediaItem.externalId },
+          create: {
+            externalId: dto.mediaItem.externalId,
+            type: dto.mediaItem.type,
+            title: dto.mediaItem.title,
+            posterUrl: dto.mediaItem.posterUrl,
+            metadata: dto.mediaItem.metadata ?? {},
+          },
+          update: {}, // Не оновлюємо якщо вже існує
+        });
 
-      if (!collection) {
-        throw new NotFoundException('Collection not found');
-      }
+        // КРОК 2: Перевірка дублікату
+        const existing = await tx.collectionItem.findUnique({
+          where: {
+            collectionId_mediaItemId: {
+              collectionId,
+              mediaItemId: mediaItem.id,
+            },
+          },
+        });
 
-      if (collection.userId !== userId) {
-        throw new ForbiddenException('You do not own this collection');
-      }
+        if (existing) {
+          throw new ConflictException('Item already in this collection');
+        }
 
-      // КРОК 2: Upsert MediaItem (знайти або створити)
-      const mediaItem = await tx.mediaItem.upsert({
-        where: { externalId: dto.externalId },
-        create: {
-          externalId: dto.externalId,
-          type: dto.type,
-          title: dto.title,
-          posterUrl: dto.posterUrl,
-          metadata: dto.metadata ?? {},
-        },
-        update: {}, // Не оновлюємо якщо вже існує
-      });
-
-      // КРОК 3: Перевірка дублікату
-      const existing = await tx.collectionItem.findUnique({
-        where: {
-          collectionId_mediaItemId: {
+        // КРОК 3: Створення CollectionItem (персональний запис)
+        const collectionItem = await tx.collectionItem.create({
+          data: {
             collectionId,
             mediaItemId: mediaItem.id,
+            status: dto.collectionItem?.status ?? ItemStatus.PLANNED,
+            rating: dto.collectionItem?.rating,
+            progress: dto.collectionItem?.progress ?? 0,
+            notes: dto.collectionItem?.notes,
           },
-        },
-      });
+          include: {
+            mediaItem: true, // Повертаємо з повною інфою
+            collection: {
+              select: {
+                userId: true,
+              },
+            },
+          },
+        });
 
-      if (existing) {
-        throw new ConflictException('Item already in this collection');
-      }
+        return collectionItem;
+      },
+      {
+        maxWait: 5000, // Максимальний час очікування транзакції (5 секунд)
+        timeout: 10000, // Timeout транзакції (10 секунд)
+        isolationLevel: Prisma.TransactionIsolationLevel.ReadCommitted, // Рівень ізоляції для запобігання dirty reads
+      },
+    );
 
-      // КРОК 4: Створення CollectionItem (персональний запис)
-      const collectionItem = await tx.collectionItem.create({
-        data: {
-          collectionId,
-          mediaItemId: mediaItem.id,
-          status: dto.status ?? ItemStatus.PLANNED,
-          rating: dto.rating,
-          progress: dto.progress ?? 0,
-          notes: dto.notes,
-        },
-        include: {
-          mediaItem: true, // Повертаємо з повною інфою
-        },
-      });
-
-      return collectionItem;
+    this.logger.log('Item added to collection', {
+      userId: result.collection.userId,
+      collectionId,
+      itemId: result.id,
+      mediaItemId: result.mediaItemId,
+      mediaTitle: result.mediaItem.title,
+      status: result.status,
     });
+
+    return result;
   }
 
-  // Оновити прогрес елемента
-  async updateItem(itemId: string, dto: Partial<AddItemDto>) {
-    // Спочатку перевіряємо чи існує елемент
-    const existingItem = await this.prisma.collectionItem.findUnique({
-      where: { id: itemId },
-    });
-
-    if (!existingItem) {
-      throw new NotFoundException(`CollectionItem with id ${itemId} not found`);
-    }
-
-    return await this.prisma.collectionItem.update({
+  /**
+   * Update collection item
+   * Ownership verification is handled by CollectionOwnershipGuard
+   */
+  async updateItem(itemId: string, dto: UpdateItemDto) {
+    const item = await this.prisma.collectionItem.update({
       where: { id: itemId },
       data: {
         status: dto.status,
@@ -186,37 +290,118 @@ export class CollectionsService {
         progress: dto.progress,
         notes: dto.notes,
       },
-      include: {
-        mediaItem: true,
-      },
-    });
-  }
-
-  // Видалити елемент з колекції
-  async removeItem(itemId: string) {
-    // Спочатку перевіряємо чи існує елемент
-    const existingItem = await this.prisma.collectionItem.findUnique({
-      where: { id: itemId },
-    });
-
-    if (!existingItem) {
-      throw new NotFoundException(`CollectionItem with id ${itemId} not found`);
-    }
-
-    return await this.prisma.collectionItem.delete({
-      where: { id: itemId },
-    });
-  }
-
-  // Отримати всі MediaItem (глобальний каталог)
-  async getAllMedia() {
-    return await this.prisma.mediaItem.findMany({
-      include: {
-        _count: {
-          select: { items: true }, // Скільки разів додано
+      select: {
+        id: true,
+        status: true,
+        rating: true,
+        progress: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        collectionId: true,
+        collection: {
+          select: {
+            userId: true,
+          },
+        },
+        mediaItem: {
+          select: {
+            id: true,
+            externalId: true,
+            type: true,
+            title: true,
+            posterUrl: true,
+            metadata: true,
+          },
         },
       },
-      orderBy: { title: 'desc' },
     });
+
+    this.logger.log('Collection item updated', {
+      userId: item.collection.userId,
+      collectionId: item.collectionId,
+      itemId: item.id,
+      mediaTitle: item.mediaItem.title,
+      status: item.status,
+      rating: item.rating,
+      progress: item.progress,
+    });
+
+    return item;
+  }
+
+  /**
+   * Remove item from collection
+   * Ownership verification is handled by CollectionOwnershipGuard
+   * @returns void (204 No Content will be returned by controller)
+   */
+  async removeItem(itemId: string) {
+    // Fetch item details before deletion for logging
+    const item = await this.prisma.collectionItem.findUnique({
+      where: { id: itemId },
+      select: {
+        id: true,
+        collectionId: true,
+        collection: {
+          select: {
+            userId: true,
+          },
+        },
+        mediaItem: {
+          select: {
+            title: true,
+          },
+        },
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Collection item not found');
+    }
+
+    await this.prisma.collectionItem.delete({
+      where: { id: itemId },
+    });
+
+    this.logger.log('Item removed from collection', {
+      userId: item.collection.userId,
+      collectionId: item.collectionId,
+      itemId: item.id,
+      mediaTitle: item.mediaItem.title,
+    });
+
+    // Повертаємо void (204 No Content буде в контролері)
+    return;
+  }
+
+  // Отримати всі MediaItem (глобальний каталог) з пагінацією
+  async getAllMedia(
+    paginationParams: PaginationParams,
+  ): Promise<PaginatedResult<any>> {
+    const { page, limit } = paginationParams;
+    const skip = PaginationUtil.calculateSkip(page, limit);
+
+    // Паралельні запити для даних та підрахунку
+    const [mediaItems, total] = await Promise.all([
+      this.prisma.mediaItem.findMany({
+        select: {
+          id: true,
+          externalId: true,
+          type: true,
+          title: true,
+          posterUrl: true,
+          metadata: true,
+          _count: {
+            select: { items: true }, // Скільки разів додано
+          },
+        },
+        orderBy: { title: 'asc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.mediaItem.count(),
+    ]);
+
+    return PaginationUtil.createResult(mediaItems, page, limit, total);
   }
 }

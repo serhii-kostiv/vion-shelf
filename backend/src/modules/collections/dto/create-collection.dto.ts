@@ -1,12 +1,22 @@
 import { Category } from '@prisma/client';
-import { IsBoolean, IsEnum, IsOptional, IsString } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsOptional,
+  IsString,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class CreateCollectionDto {
   @IsString()
+  @MinLength(1)
+  @MaxLength(100)
   title: string;
 
   @IsString()
   @IsOptional()
+  @MaxLength(500)
   description?: string;
 
   @IsEnum(Category)
@@ -14,5 +24,5 @@ export class CreateCollectionDto {
 
   @IsBoolean()
   @IsOptional()
-  isPublic?: boolean;
+  isPublic?: boolean = false;
 }
