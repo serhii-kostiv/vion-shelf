@@ -18,10 +18,13 @@ export class OptionalJwtAuthGuard extends AuthGuard('jwt') {
   /**
    * Обробляємо помилки - просто ігноруємо їх
    */
-  handleRequest<TUser = any>(err: any, user: any): TUser {
+  handleRequest<TUser = unknown>(
+    err: Error | null,
+    user: TUser | false,
+  ): TUser | undefined {
     // Якщо є user - повертаємо його
     // Якщо немає або є помилка - повертаємо undefined
     // Не викидаємо exception
-    return user;
+    return user || undefined;
   }
 }

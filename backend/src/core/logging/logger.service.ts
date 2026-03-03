@@ -16,7 +16,7 @@ interface LogContext {
  */
 @Injectable()
 export class AppLoggerService implements NestLoggerService {
-  private readonly logger: Logger;
+  private logger: Logger;
   private readonly sensitiveFields = [
     'password',
     'token',
@@ -29,6 +29,13 @@ export class AppLoggerService implements NestLoggerService {
 
   constructor(context?: string) {
     this.logger = new Logger(context ?? 'Application');
+  }
+
+  /**
+   * Set logger context
+   */
+  setContext(context: string): void {
+    this.logger = new Logger(context);
   }
 
   /**
