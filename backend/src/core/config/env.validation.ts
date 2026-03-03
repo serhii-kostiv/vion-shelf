@@ -28,4 +28,5 @@ export const envValidationSchema = Joi.object({
 
   // External APIs (optional)
   GOOGLE_BOOKS_API_KEY: Joi.string().optional().allow(''),
+  TMDB_API_KEY: Joi.string().optional().allow(''),
 });
