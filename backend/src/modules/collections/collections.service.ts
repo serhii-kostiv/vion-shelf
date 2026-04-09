@@ -287,39 +287,59 @@ export class CollectionsService {
    * Ownership verification is handled by CollectionOwnershipGuard
    */
   async updateItem(itemId: string, dto: UpdateItemDto) {
-    const item = await this.prisma.collectionItem.update({
-      where: { id: itemId },
-      data: {
-        status: dto.status,
-        rating: dto.rating,
-        progress: dto.progress,
-        notes: dto.notes,
-      },
-      select: {
-        id: true,
-        status: true,
-        rating: true,
-        progress: true,
-        notes: true,
-        createdAt: true,
-        updatedAt: true,
-        collectionId: true,
-        collection: {
-          select: {
-            userId: true,
+    const { status, rating, progress, notes, title, posterUrl, metadata } = dto;
+
+    const item = await this.prisma.$transaction(async (tx) => {
+      // Оновлюємо mediaItem якщо є відповідні поля
+      if (
+        title !== undefined ||
+        posterUrl !== undefined ||
+        metadata !== undefined
+      ) {
+        const collectionItem = await tx.collectionItem.findUnique({
+          where: { id: itemId },
+          select: { mediaItemId: true },
+        });
+
+        if (collectionItem) {
+          await tx.mediaItem.update({
+            where: { id: collectionItem.mediaItemId },
+            data: {
+              ...(title !== undefined && { title }),
+              ...(posterUrl !== undefined && { posterUrl: posterUrl || null }),
+              ...(metadata !== undefined && { metadata }),
+            },
+          });
+        }
+      }
+
+      return tx.collectionItem.update({
+        where: { id: itemId },
+        data: { status, rating, progress, notes },
+        select: {
+          id: true,
+          status: true,
+          rating: true,
+          progress: true,
+          notes: true,
+          createdAt: true,
+          updatedAt: true,
+          collectionId: true,
+          collection: {
+            select: { userId: true },
+          },
+          mediaItem: {
+            select: {
+              id: true,
+              externalId: true,
+              type: true,
+              title: true,
+              posterUrl: true,
+              metadata: true,
+            },
           },
         },
-        mediaItem: {
-          select: {
-            id: true,
-            externalId: true,
-            type: true,
-            title: true,
-            posterUrl: true,
-            metadata: true,
-          },
-        },
-      },
+      });
     });
 
     this.logger.log('Collection item updated', {

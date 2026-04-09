@@ -2,8 +2,10 @@ import { ItemStatus } from '@prisma/client';
 import {
   IsEnum,
   IsInt,
+  IsObject,
   IsOptional,
   IsString,
+  IsUrl,
   Max,
   MaxLength,
   Min,
@@ -29,4 +31,18 @@ export class UpdateItemDto {
   @IsOptional()
   @MaxLength(1000)
   notes?: string;
+
+  // MediaItem поля
+  @IsString()
+  @MaxLength(255)
+  @IsOptional()
+  title?: string;
+
+  @IsUrl()
+  @IsOptional()
+  posterUrl?: string;
+
+  @IsObject()
+  @IsOptional()
+  metadata?: object;
 }

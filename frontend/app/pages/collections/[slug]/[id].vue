@@ -101,6 +101,11 @@
               <p class="text-xs text-gray-400 mb-1">Додано</p>
               <p class="text-sm">{{ formatDate(item.createdAt) }}</p>
             </div>
+
+            <div v-if="item.updatedAt !== item.createdAt">
+              <p class="text-xs text-gray-400 mb-1">Оновлено</p>
+              <p class="text-sm">{{ formatDate(item.updatedAt) }}</p>
+            </div>
           </div>
 
           <div v-if="item.notes" class="mt-6">

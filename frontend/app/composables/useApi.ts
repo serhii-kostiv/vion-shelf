@@ -35,6 +35,7 @@ export const useApi = <T>(url: string, options: any = {}) => {
 // useFetch не можна викликати після монтування — використовуй цей метод
 export const useApiFetch = <T>(url: string, options: any = {}): Promise<T> => {
   const token = useCookie("auth.token").value;
+  const toast = useToast();
 
   return $fetch<T>(url, {
     baseURL: "http://localhost:4000",
@@ -43,6 +44,18 @@ export const useApiFetch = <T>(url: string, options: any = {}): Promise<T> => {
     headers: {
       ...options.headers,
       Authorization: token ? `Bearer ${token}` : "",
+    },
+    onResponseError({ response }) {
+      const data = response._data;
+      const message = Array.isArray(data?.message)
+        ? data.message.join(", ")
+        : (data?.message ?? "Щось пішло не так");
+
+      toast.add({
+        title: `Помилка ${response.status}`,
+        description: message,
+        color: "error",
+      });
     },
   });
 };
