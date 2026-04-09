@@ -68,7 +68,13 @@ export const useAuth = () => {
 
 ### Single File Components (SFC)
 
+Порядок блоків у `.vue` файлах завжди такий: `<template>` → `<script>` → `<style>`.
+
 ```vue
+<template>
+  <!-- Шаблон -->
+</template>
+
 <script setup lang="ts">
 // Логіка компонента
 const props = defineProps<{
@@ -80,10 +86,6 @@ const emit = defineEmits<{
   select: [item: Item];
 }>();
 </script>
-
-<template>
-  <!-- Шаблон -->
-</template>
 
 <style scoped>
 /* Стилі */

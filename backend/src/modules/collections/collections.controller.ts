@@ -88,6 +88,19 @@ export class CollectionsController {
   }
 
   /**
+   * Delete collection
+   * DELETE /collections/:id
+   * @returns 204 No Content
+   */
+  @Delete(':id')
+  @UseGuards(JWTGuard, CollectionOwnershipGuard)
+  @ResourceType('collection')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async deleteCollection(@Param('id') collectionId: string) {
+    return this.collectionsService.deleteCollection(collectionId);
+  }
+
+  /**
    * Add item to collection
    * POST /collections/:id/items
    * @returns 201 Created with collection item data
@@ -98,6 +111,17 @@ export class CollectionsController {
   @HttpCode(HttpStatus.CREATED)
   async addItem(@Param('id') collectionId: string, @Body() dto: AddItemDto) {
     return this.collectionsService.addItemToCollection(collectionId, dto);
+  }
+
+  /**
+   * Get collection item by id
+   * GET /collections/items/:id
+   * @returns 200 OK with item data
+   */
+  @Get('items/:id')
+  @UseGuards(JWTGuard)
+  async getItem(@Param('id') itemId: string) {
+    return this.collectionsService.getItem(itemId);
   }
 
   /**

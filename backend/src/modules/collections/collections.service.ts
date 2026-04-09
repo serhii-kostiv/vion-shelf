@@ -202,6 +202,11 @@ export class CollectionsService {
     return collection;
   }
 
+  async deleteCollection(collectionId: string) {
+    await this.prisma.collection.delete({ where: { id: collectionId } });
+    this.logger.log('Collection deleted', { collectionId });
+  }
+
   /**
    * Add item to collection (Upsert Pattern)
    * Ownership verification is handled by CollectionOwnershipGuard
@@ -326,6 +331,43 @@ export class CollectionsService {
       rating: item.rating,
       progress: item.progress,
     });
+
+    return item;
+  }
+  async getItem(itemId: string) {
+    const item = await this.prisma.collectionItem.findUnique({
+      where: { id: itemId },
+      select: {
+        id: true,
+        status: true,
+        rating: true,
+        progress: true,
+        notes: true,
+        createdAt: true,
+        updatedAt: true,
+        collectionId: true,
+        collection: {
+          select: {
+            title: true,
+            slug: true,
+          },
+        },
+        mediaItem: {
+          select: {
+            id: true,
+            externalId: true,
+            type: true,
+            title: true,
+            posterUrl: true,
+            metadata: true,
+          },
+        },
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException('Collection item not found');
+    }
 
     return item;
   }

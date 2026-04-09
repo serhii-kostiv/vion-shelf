@@ -12,7 +12,7 @@ VionShelf — це вебдодаток для каталогізації та �
 
 ## 2. Технологічний стек та Архітектура
 
-- **Frontend**: Nuxt 3 (SSR), Vue 3 (Composition API), Tailwind CSS
+- **Frontend**: Nuxt 4 (SSR), Vue 3 (Composition API), Tailwind CSS
 - **Бекенд**: NestJS (REST API)
 - **База даних**: PostgreSQL
 - **ORM**: Prisma
@@ -113,7 +113,7 @@ VionShelf — це вебдодаток для каталогізації та �
 
 - **PATCH /items/:id** — Оновити прогрес, статус або оцінку
 
-## 5. Вимоги до Frontend (Nuxt 3)
+## 5. Вимоги до Frontend (Nuxt 4)
 
 ### 5.1. Управління станом та Data Fetching
 
