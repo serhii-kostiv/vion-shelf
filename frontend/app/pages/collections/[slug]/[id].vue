@@ -67,14 +67,24 @@
                 {{ item.mediaItem.type }}
               </p>
             </div>
-            <UButton
-              class="cursor-pointer"
-              icon="i-lucide-pencil"
-              label="Редагувати"
-              variant="soft"
-              size="sm"
-              @click="editItem"
-            />
+            <div class="grid grid-cols-1 gap-3">
+              <UDropdownMenu :items="itemMenuItems">
+                <UTooltip
+                  text="Дії"
+                  :content="{
+                    side: 'top',
+                  }"
+                >
+                  <UButton
+                    icon="i-lucide-ellipsis-vertical"
+                    variant="soft"
+                    color="neutral"
+                    size="sm"
+                    aria-label="Дії"
+                  />
+                </UTooltip>
+              </UDropdownMenu>
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-4 max-w-sm">
@@ -97,14 +107,16 @@
               <p class="font-medium">{{ item.progress }}</p>
             </div>
 
-            <div>
-              <p class="text-xs text-gray-400 mb-1">Додано</p>
-              <p class="text-sm">{{ formatDate(item.createdAt) }}</p>
-            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div>
+                <p class="text-xs text-gray-400 mb-1">Додано</p>
+                <p class="text-sm">{{ formatDate(item.createdAt) }}</p>
+              </div>
 
-            <div v-if="item.updatedAt !== item.createdAt">
-              <p class="text-xs text-gray-400 mb-1">Оновлено</p>
-              <p class="text-sm">{{ formatDate(item.updatedAt) }}</p>
+              <div v-if="item.updatedAt !== item.createdAt">
+                <p class="text-xs text-gray-400 mb-1">Оновлено</p>
+                <p class="text-sm">{{ formatDate(item.updatedAt) }}</p>
+              </div>
             </div>
           </div>
 
@@ -127,6 +139,8 @@
           </div>
         </div>
       </div>
+
+      <hr class="my-10" />
     </template>
   </div>
 </template>
@@ -149,17 +163,25 @@ const {
 
 useSeoMeta({ title: computed(() => item.value?.mediaItem.title ?? "Елемент") });
 
-const openCollectionItemModal = useCollectionItemModal();
+const { editItem, removeItem } = useCollectionItemActions({
+  get collectionId() {
+    return item.value?.collectionId ?? "";
+  },
+  get collectionCategory() {
+    return item.value?.mediaItem.type ?? "";
+  },
+  onUpdate: refresh,
+  onRemove: async () => await navigateTo(`/collections/${slug}`),
+});
 
-async function editItem() {
-  if (!item.value) return;
-  const result = await openCollectionItemModal({
-    collectionId: item.value.collectionId,
-    collectionCategory: item.value.mediaItem.type,
-    item: item.value,
-  });
-  if (result) refresh();
-}
+const itemMenuItems = computed(() =>
+  item.value
+    ? buildActionMenuItems(item.value, {
+        onEdit: editItem,
+        onRemove: removeItem,
+      })
+    : [],
+);
 
 const hasMetadata = computed(() =>
   item.value ? Object.keys(item.value.mediaItem.metadata).length > 0 : false,

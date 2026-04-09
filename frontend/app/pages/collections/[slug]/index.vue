@@ -66,7 +66,6 @@ import type { CollectionDetail, CollectionItem } from "~/types/collection";
 
 definePageMeta({ auth: true });
 
-const apiFetch = useApiFetch();
 const route = useRoute();
 const slug = route.params.slug as string;
 
@@ -80,10 +79,8 @@ const {
 } = await useApi<CollectionDetail>(`/collections/${slug}`);
 
 const openCollectionItemModal = useCollectionItemModal();
-const confirm = useConfirmDialog();
 
 async function addItem() {
-  console.log(collection);
   if (!collection.value) return;
   const result = await openCollectionItemModal({
     collectionId: collection.value.id,
@@ -92,26 +89,14 @@ async function addItem() {
   if (result) refresh();
 }
 
-async function editItem(item: CollectionItem) {
-  if (!collection.value) return;
-  const result = await openCollectionItemModal({
-    collectionId: collection.value.id,
-    collectionCategory: collection.value.category,
-    item,
-  });
-  if (result) refresh();
-}
-
-async function removeItem(item: CollectionItem) {
-  const confirmed = await confirm({
-    title: "Видалити елемент?",
-    description: `"${item.mediaItem.title}" буде видалено з колекції.`,
-    confirmLabel: "Видалити",
-    confirmColor: "error",
-  });
-  if (!confirmed) return;
-
-  await apiFetch(`/collections/items/${item.id}`, { method: "DELETE" });
-  refresh();
-}
+const { editItem, removeItem } = useCollectionItemActions({
+  get collectionId() {
+    return collection.value?.id ?? "";
+  },
+  get collectionCategory() {
+    return collection.value?.category ?? "";
+  },
+  onUpdate: refresh,
+  onRemove: () => refresh(),
+});
 </script>

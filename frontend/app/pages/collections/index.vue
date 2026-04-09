@@ -50,13 +50,8 @@
 <script setup lang="ts">
 import type { Collection, PaginatedResult } from "~/types/collection";
 
-const apiFetch = useApiFetch();
-
 definePageMeta({ auth: true });
 useSeoMeta({ title: "Мої колекції" });
-
-const openCollectionModal = useCollectionModal();
-const confirm = useConfirmDialog();
 
 const { data, status, error, refresh } =
   await useApi<PaginatedResult<Collection>>("/collections");
@@ -66,26 +61,15 @@ const isEmpty = computed(
   () => status.value === "success" && collections.value.length === 0,
 );
 
+const openCollectionModal = useCollectionModal();
+
 async function openCreate() {
   const result = await openCollectionModal();
   if (result) refresh();
 }
 
-async function openEdit(collection: Collection) {
-  const result = await openCollectionModal(collection);
-  if (result) refresh();
-}
-
-async function removeCollection(collection: Collection) {
-  const confirmed = await confirm({
-    title: "Видалити колекцію?",
-    description: `"${collection.title}" та всі її елементи будуть видалені назавжди.`,
-    confirmLabel: "Видалити",
-    confirmColor: "error",
-  });
-  if (!confirmed) return;
-
-  await apiFetch(`/collections/${collection.id}`, { method: "DELETE" });
-  refresh();
-}
+const { editCollection: openEdit, removeCollection } = useCollectionActions({
+  onUpdate: refresh,
+  onRemove: refresh,
+});
 </script>

@@ -38,13 +38,20 @@
         "
       >
         <UDropdownMenu :items="menuItems" @update:open="isMenuOpen = $event">
-          <UButton
-            icon="i-lucide-ellipsis-vertical"
-            size="xs"
-            color="neutral"
-            variant="soft"
-            aria-label="Дії"
-          />
+          <UTooltip
+            text="Дії"
+            :content="{
+              side: 'top',
+            }"
+          >
+            <UButton
+              icon="i-lucide-ellipsis-vertical"
+              size="xs"
+              color="neutral"
+              variant="soft"
+              aria-label="Дії"
+            />
+          </UTooltip>
         </UDropdownMenu>
       </div>
     </NuxtLink>
@@ -94,23 +101,10 @@ const isMenuOpen = ref(false);
 
 const itemUrl = computed(() => `/collections/${props.slug}/${props.item.id}`);
 
-const menuItems = [
-  [
-    {
-      label: "Редагувати",
-      icon: "i-lucide-pencil",
-      onSelect: () => emits("edit", props.item),
-    },
-  ],
-  [
-    {
-      label: "Видалити",
-      icon: "i-lucide-trash-2",
-      color: "error" as const,
-      onSelect: () => emits("remove", props.item),
-    },
-  ],
-];
+const menuItems = buildActionMenuItems(props.item, {
+  onEdit: (i) => emits("edit", i),
+  onRemove: (i) => emits("remove", i),
+});
 
 const statusLabel: Record<string, string> = {
   PLANNED: "Заплановано",

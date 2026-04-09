@@ -39,13 +39,20 @@
       :class="isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
     >
       <UDropdownMenu :items="menuItems" @update:open="isMenuOpen = $event">
-        <UButton
-          icon="i-lucide-ellipsis-vertical"
-          size="xs"
-          color="neutral"
-          variant="ghost"
-          aria-label="Дії з колекцією"
-        />
+        <UTooltip
+          text="Дії"
+          :content="{
+            side: 'top',
+          }"
+        >
+          <UButton
+            icon="i-lucide-ellipsis-vertical"
+            size="xs"
+            color="neutral"
+            variant="ghost"
+            aria-label="Дії з колекцією"
+          />
+        </UTooltip>
       </UDropdownMenu>
     </div>
   </div>
@@ -65,21 +72,8 @@ const emits = defineEmits<{
 
 const isMenuOpen = ref(false);
 
-const menuItems = [
-  [
-    {
-      label: "Редагувати",
-      icon: "i-lucide-pencil",
-      onSelect: () => emits("edit", props.collection),
-    },
-  ],
-  [
-    {
-      label: "Видалити",
-      icon: "i-lucide-trash-2",
-      color: "error" as const,
-      onSelect: () => emits("remove", props.collection),
-    },
-  ],
-];
+const menuItems = buildActionMenuItems(props.collection, {
+  onEdit: (c) => emits("edit", c),
+  onRemove: (c) => emits("remove", c),
+});
 </script>
