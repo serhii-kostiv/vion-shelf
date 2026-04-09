@@ -56,9 +56,9 @@
       </p>
       <div class="flex items-center justify-between mt-auto pt-1">
         <span class="text-xs text-gray-400">{{ item.mediaItem.type }}</span>
-        <span v-if="item.rating" class="text-xs text-gray-500"
-          >★ {{ item.rating }}/10</span
-        >
+        <span v-if="item.rating" class="text-xs text-gray-500">
+          ★ {{ item.rating }}/10
+        </span>
       </div>
       <div v-if="item.progress" class="flex items-center justify-between">
         <span class="text-xs text-gray-400">Прогрес</span>

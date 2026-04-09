@@ -23,10 +23,31 @@ export class CollectionsService {
 
   constructor(private readonly prisma: PrismaService) {}
 
+  async checkSlugAvailability(
+    slug: string,
+    excludeId?: string,
+  ): Promise<{ available: boolean }> {
+    const existing = await this.prisma.collection.findUnique({
+      where: { slug },
+      select: { id: true },
+    });
+    const available = !existing || existing.id === excludeId;
+    return { available };
+  }
+
   // Створення колекції
   async createCollection(userId: string, dto: CreateCollectionDto) {
-    // Генеруємо slug з назви за допомогою SlugUtil
-    const slug = SlugUtil.generate(dto.title);
+    const slug = dto.slug ?? SlugUtil.generate(dto.title);
+
+    if (dto.slug) {
+      const existing = await this.prisma.collection.findUnique({
+        where: { slug },
+        select: { id: true },
+      });
+      if (existing) {
+        throw new ConflictException('Slug вже зайнятий');
+      }
+    }
 
     const collection = await this.prisma.collection.create({
       data: {
@@ -166,14 +187,37 @@ export class CollectionsService {
    * Ownership verification is handled by CollectionOwnershipGuard
    */
   async updateCollection(collectionId: string, dto: UpdateCollectionDto) {
-    // Оновлюємо колекцію (ownership вже перевірено guard'ом)
-    const collection = await this.prisma.collection.update({
+    // Якщо передано новий slug — перевіряємо унікальність
+    if (dto.slug) {
+      const existing: { id: string } | null =
+        await this.prisma.collection.findUnique({
+          where: { slug: dto.slug },
+          select: { id: true },
+        });
+      if (existing && existing.id !== collectionId) {
+        throw new ConflictException('Slug вже зайнятий');
+      }
+    }
+
+    const collection: {
+      id: string;
+      title: string;
+      description: string | null;
+      slug: string;
+      category: string;
+      isPublic: boolean;
+      createdAt: Date;
+      updatedAt: Date;
+      userId: string;
+      _count: { items: number };
+    } = await this.prisma.collection.update({
       where: { id: collectionId },
       data: {
         title: dto.title,
         description: dto.description,
         category: dto.category,
         isPublic: dto.isPublic,
+        ...(dto.slug ? { slug: dto.slug } : {}),
       },
       select: {
         id: true,
@@ -195,6 +239,7 @@ export class CollectionsService {
       userId: collection.userId,
       collectionId: collection.id,
       title: collection.title,
+      slug: collection.slug,
       category: collection.category,
       isPublic: collection.isPublic,
     });

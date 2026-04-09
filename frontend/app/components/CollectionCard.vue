@@ -24,7 +24,13 @@
         class="mt-3 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500"
       >
         <span>{{ collection.itemsCount }} елементів</span>
-        <span>{{ collection.isPublic ? "Публічна" : "Приватна" }}</span>
+        <UBadge
+          :label="collection.isPublic ? 'Публічна' : 'Приватна'"
+          variant="soft"
+          size="sm"
+          :color="collection.isPublic ? 'primary' : 'warning'"
+          class="shrink-0"
+        />
       </div>
     </NuxtLink>
 

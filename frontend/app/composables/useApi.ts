@@ -31,31 +31,33 @@ export const useApi = <T>(url: string, options: any = {}) => {
   });
 };
 
-// Для мутацій всередині компонентів (POST/PATCH/DELETE)
-// useFetch не можна викликати після монтування — використовуй цей метод
-export const useApiFetch = <T>(url: string, options: any = {}): Promise<T> => {
-  const token = useCookie("auth.token").value;
+// Викликай в setup() — повертає функцію apiFetch для використання в обробниках подій
+export const useApiFetch = () => {
   const toast = useToast();
 
-  return $fetch<T>(url, {
-    baseURL: "http://localhost:4000",
-    ...options,
-    credentials: "include",
-    headers: {
-      ...options.headers,
-      Authorization: token ? `Bearer ${token}` : "",
-    },
-    onResponseError({ response }) {
-      const data = response._data;
-      const message = Array.isArray(data?.message)
-        ? data.message.join(", ")
-        : (data?.message ?? "Щось пішло не так");
+  return <T>(url: string, options: any = {}): Promise<T> => {
+    const token = useCookie("auth.token").value;
 
-      toast.add({
-        title: `Помилка ${response.status}`,
-        description: message,
-        color: "error",
-      });
-    },
-  });
+    return $fetch<T>(url, {
+      baseURL: "http://localhost:4000",
+      ...options,
+      credentials: "include",
+      headers: {
+        ...options.headers,
+        Authorization: token ? `Bearer ${token}` : "",
+      },
+      onResponseError({ response }) {
+        const data = response._data;
+        const message = Array.isArray(data?.message)
+          ? data.message.join(", ")
+          : (data?.message ?? "Щось пішло не так");
+
+        toast.add({
+          title: `Помилка ${response.status}`,
+          description: message,
+          color: "error",
+        });
+      },
+    });
+  };
 };

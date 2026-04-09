@@ -306,6 +306,7 @@ const emits = defineEmits<{
 }>();
 
 const loading = ref(false);
+const apiFetch = useApiFetch();
 
 const allCategoryOptions = [
   { label: "Книги", value: "BOOKS" },
@@ -436,7 +437,7 @@ async function onSubmit() {
     let result: CollectionItem;
 
     if (props.item) {
-      result = await useApiFetch<CollectionItem>(
+      result = await apiFetch<CollectionItem>(
         `/collections/items/${props.item.id}`,
         {
           method: "PATCH",
@@ -455,7 +456,7 @@ async function onSubmit() {
       if (!form.mediaItem.externalId) {
         form.mediaItem.externalId = `manual-${Date.now()}`;
       }
-      result = await useApiFetch<CollectionItem>(
+      result = await apiFetch<CollectionItem>(
         `/collections/${props.collectionId}/items`,
         {
           method: "POST",

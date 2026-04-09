@@ -50,6 +50,8 @@
 <script setup lang="ts">
 import type { Collection, PaginatedResult } from "~/types/collection";
 
+const apiFetch = useApiFetch();
+
 definePageMeta({ auth: true });
 useSeoMeta({ title: "Мої колекції" });
 
@@ -83,7 +85,7 @@ async function removeCollection(collection: Collection) {
   });
   if (!confirmed) return;
 
-  await useApiFetch(`/collections/${collection.id}`, { method: "DELETE" });
+  await apiFetch(`/collections/${collection.id}`, { method: "DELETE" });
   refresh();
 }
 </script>

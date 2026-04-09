@@ -66,6 +66,7 @@ import type { CollectionDetail, CollectionItem } from "~/types/collection";
 
 definePageMeta({ auth: true });
 
+const apiFetch = useApiFetch();
 const route = useRoute();
 const slug = route.params.slug as string;
 
@@ -82,6 +83,7 @@ const openCollectionItemModal = useCollectionItemModal();
 const confirm = useConfirmDialog();
 
 async function addItem() {
+  console.log(collection);
   if (!collection.value) return;
   const result = await openCollectionItemModal({
     collectionId: collection.value.id,
@@ -109,7 +111,7 @@ async function removeItem(item: CollectionItem) {
   });
   if (!confirmed) return;
 
-  await useApiFetch(`/collections/items/${item.id}`, { method: "DELETE" });
+  await apiFetch(`/collections/items/${item.id}`, { method: "DELETE" });
   refresh();
 }
 </script>

@@ -109,7 +109,7 @@ type Schema = z.output<typeof schema>;
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   try {
-    // 1. Провайдер має називатися 'local' (якщо ти так вказав у nuxt.config)
+    // 1. Провайдер має називатися 'local' (як у nuxt.config)
     // 2. redirect: true автоматично перекине юзера на головну після успіху
     const credentials = {
       name: payload.data.name,

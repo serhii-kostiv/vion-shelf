@@ -63,6 +63,18 @@ export class CollectionsController {
   }
 
   /**
+   * Check slug availability
+   * GET /collections/check-slug/:slug?excludeId=...
+   */
+  @Get('check-slug/:slug')
+  async checkSlug(
+    @Param('slug') slug: string,
+    @Query('excludeId') excludeId?: string,
+  ) {
+    return this.collectionsService.checkSlugAvailability(slug, excludeId);
+  }
+
+  /**
    * Get collection by slug
    * GET /collections/:slug
    * @returns 200 OK with collection data
