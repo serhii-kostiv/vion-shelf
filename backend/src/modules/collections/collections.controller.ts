@@ -18,6 +18,7 @@ import {
   AddItemDto,
   UpdateItemDto,
 } from './dto';
+import { PublicCollectionsQueryDto } from './dto/public-collections-query.dto';
 import { JWTGuard } from '../auth/guards/jwt.quard';
 import { User } from '@/common/decorators/user.decorator';
 import { PaginationQueryDto } from '@/common/dto/pagination-query.dto';
@@ -60,6 +61,16 @@ export class CollectionsController {
       limit: paginationQuery.limit ?? 20,
     };
     return this.collectionsService.getUserCollections(userId, params);
+  }
+
+  /**
+   * Get public collections
+   * GET /collections/public
+   * @returns 200 OK with paginated public collections
+   */
+  @Get('public')
+  async getPublicCollections(@Query() query: PublicCollectionsQueryDto) {
+    return this.collectionsService.getPublicCollections(query);
   }
 
   /**

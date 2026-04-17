@@ -8,6 +8,7 @@ import { CreateCollectionDto } from './dto/create-collection.dto';
 import { UpdateCollectionDto } from './dto/update-collection.dto';
 import { AddItemDto } from './dto/add-item.dto';
 import { UpdateItemDto } from './dto/update-item.dto';
+import { PublicCollectionsQueryDto } from './dto/public-collections-query.dto';
 import { ItemStatus, Prisma } from '@prisma/client';
 import { SlugUtil } from '@/common/utils/slug.util';
 import {
@@ -22,6 +23,57 @@ export class CollectionsService {
   private readonly logger = new AppLoggerService(CollectionsService.name);
 
   constructor(private readonly prisma: PrismaService) {}
+
+  async getPublicCollections(
+    query: PublicCollectionsQueryDto,
+  ): Promise<PaginatedResult<any>> {
+    const { page = 1, limit = 20, category } = query;
+    const skip = PaginationUtil.calculateSkip(page, limit);
+
+    const where = {
+      isPublic: true,
+      ...(category && { category }),
+    };
+
+    const [collections, total] = await Promise.all([
+      this.prisma.collection.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          description: true,
+          slug: true,
+          category: true,
+          isPublic: true,
+          createdAt: true,
+          updatedAt: true,
+          user: {
+            select: {
+              id: true,
+              username: true,
+              name: true,
+              avatarUrl: true,
+            },
+          },
+          _count: {
+            select: { items: true },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.collection.count({ where }),
+    ]);
+
+    const data = collections.map((c) => ({
+      ...c,
+      itemsCount: c._count.items,
+      _count: undefined,
+    }));
+
+    return PaginationUtil.createResult(data, page, limit, total);
+  }
 
   async checkSlugAvailability(
     slug: string,
@@ -415,6 +467,7 @@ export class CollectionsService {
           select: {
             title: true,
             slug: true,
+            userId: true,
           },
         },
         mediaItem: {

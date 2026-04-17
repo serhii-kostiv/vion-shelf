@@ -21,9 +21,9 @@
           <UButton
             color="neutral"
             variant="ghost"
-            label="Logout"
+            label="Вийти"
             icon="i-lucide-log-out"
-            @click="signOut()"
+            @click="logout"
           />
         </template>
 
@@ -57,6 +57,11 @@ const { status, signOut, data } = useAuth();
 const isAuth = computed(() => status.value === "authenticated");
 
 const navItems: NavigationMenuItem[] = [
-  { label: "Колекції", to: "/collections", icon: "i-lucide-library" },
+  { label: "Публічні колекції", to: "/", icon: "i-lucide-library" },
+  { label: "Мої колекції", to: "/library", icon: "i-lucide-book-lock" },
 ];
+
+const logout = async () => {
+  await signOut({ callbackUrl: "/", redirect: true });
+};
 </script>

@@ -109,29 +109,28 @@ type Schema = z.output<typeof schema>;
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   try {
-    // 1. Провайдер має називатися 'local' (як у nuxt.config)
-    // 2. redirect: true автоматично перекине юзера на головну після успіху
     const credentials = {
       name: payload.data.name,
       username: payload.data.username,
       email: payload.data.email,
       password: payload.data.password,
-      password_confirmation: payload.data.password_confirmation,
     };
     await signUp(credentials, {
       callbackUrl: "/login",
-      redirect: true,
+      redirect: false,
       preventLoginFlow: true,
     });
 
     toast.add({ title: "Успіх", description: "Ви успішно зареєструвались" });
+    await navigateTo("/login");
   } catch (error: any) {
-    // // Sidebase викидає помилку, якщо статус відповіді не 2xx
-    // toast.add({
-    //   title: "Помилка входу",
-    //   description: "Невірний email або пароль",
-    //   color: "error",
-    // });
+    const message =
+      error?.data?.message ?? error?.message ?? "Щось пішло не так";
+    toast.add({
+      title: "Помилка реєстрації",
+      description: Array.isArray(message) ? message.join(", ") : message,
+      color: "error",
+    });
   }
 }
 </script>

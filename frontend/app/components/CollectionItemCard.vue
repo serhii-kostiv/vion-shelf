@@ -32,6 +32,7 @@
 
       <!-- Dropdown меню -->
       <div
+        v-if="props.isOwner"
         class="absolute top-2 right-2 transition-opacity"
         :class="
           isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'
@@ -90,6 +91,8 @@ type BadgeColor =
 const props = defineProps<{
   item: CollectionItem;
   slug: string;
+  isOwner: boolean;
+  basePath?: string;
 }>();
 
 const emits = defineEmits<{
@@ -99,7 +102,9 @@ const emits = defineEmits<{
 
 const isMenuOpen = ref(false);
 
-const itemUrl = computed(() => `/collections/${props.slug}/${props.item.id}`);
+const itemUrl = computed(
+  () => `${props.basePath ?? "/collections"}/${props.slug}/${props.item.id}`,
+);
 
 const menuItems = buildActionMenuItems(props.item, {
   onEdit: (i) => emits("edit", i),

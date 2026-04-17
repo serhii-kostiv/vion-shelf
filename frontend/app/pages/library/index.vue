@@ -40,6 +40,8 @@
         v-for="collection in collections"
         :key="collection.id"
         :collection="collection"
+        isOwner
+        base-path="/library"
         @edit="openEdit"
         @remove="removeCollection"
       />

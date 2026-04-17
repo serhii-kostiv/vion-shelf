@@ -95,10 +95,11 @@ async function onSubmit(payload: FormSubmitEvent<Schema>) {
 
     toast.add({ title: "Успіх", description: "Ви увійшли в систему" });
   } catch (error: any) {
-    // Sidebase викидає помилку, якщо статус відповіді не 2xx
+    const message =
+      error?.data?.message ?? error?.message ?? "Невірний email або пароль";
     toast.add({
       title: "Помилка входу",
-      description: "Невірний email або пароль",
+      description: Array.isArray(message) ? message.join(", ") : message,
       color: "error",
     });
   }

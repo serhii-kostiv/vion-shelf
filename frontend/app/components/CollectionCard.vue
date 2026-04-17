@@ -2,7 +2,11 @@
   <div
     class="relative group block p-4 rounded-lg border border-gray-200 dark:border-gray-700 hover:border-gray-400 dark:hover:border-gray-500 transition-colors"
   >
-    <NuxtLink :to="`/collections/${collection.slug}`" class="block">
+    <NuxtLink
+      :to="`${basePath ?? '/collections'}/${collection.slug}`"
+      class="block"
+      @click="onNavigate"
+    >
       <div class="flex items-start justify-between gap-2 pr-6">
         <h3 class="font-medium truncate">{{ collection.title }}</h3>
         <UBadge
@@ -21,20 +25,24 @@
       </p>
 
       <div
-        class="mt-3 flex items-center gap-3 text-xs text-gray-400 dark:text-gray-500"
+        class="mt-3 flex items-center justify-between gap-3 text-xs text-gray-400 dark:text-gray-500"
       >
-        <span>{{ collection.itemsCount }} елементів</span>
-        <UBadge
-          :label="collection.isPublic ? 'Публічна' : 'Приватна'"
-          variant="soft"
-          size="sm"
-          :color="collection.isPublic ? 'primary' : 'warning'"
-          class="shrink-0"
-        />
+        <div class="flex gap-3">
+          <span>{{ collection.itemsCount }} елементів</span>
+          <UBadge
+            :label="collection.isPublic ? 'Публічна' : 'Приватна'"
+            variant="soft"
+            size="sm"
+            :color="collection.isPublic ? 'primary' : 'warning'"
+            class="shrink-0"
+          />
+        </div>
+        <div v-if="!isOwner">Власник: {{ collection.user.name }}</div>
       </div>
     </NuxtLink>
 
     <div
+      v-if="isOwner"
       class="absolute top-3 right-3 transition-opacity"
       :class="isMenuOpen ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
     >
@@ -63,6 +71,9 @@ import type { Collection } from "~/types/collection";
 
 const props = defineProps<{
   collection: Collection;
+  isOwner?: boolean;
+  source?: "public" | "private";
+  basePath?: string;
 }>();
 
 const emits = defineEmits<{
@@ -71,6 +82,11 @@ const emits = defineEmits<{
 }>();
 
 const isMenuOpen = ref(false);
+const { setSource } = useNavigationSource();
+
+function onNavigate() {
+  if (props.source) setSource(props.source);
+}
 
 const menuItems = buildActionMenuItems(props.collection, {
   onEdit: (c) => emits("edit", c),

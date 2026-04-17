@@ -1,3 +1,5 @@
+import type { User } from "next-auth";
+
 export interface Collection {
   id: string;
   title: string;
@@ -5,6 +7,7 @@ export interface Collection {
   slug: string;
   category: string;
   isPublic: boolean;
+  user: User;
   itemsCount: number;
   createdAt: string;
   updatedAt: string;
@@ -25,6 +28,7 @@ export interface CollectionItem {
   collection?: {
     title: string;
     slug: string;
+    userId: string;
   };
   status: "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "DROPPED";
   rating: number | null;

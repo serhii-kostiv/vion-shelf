@@ -21,7 +21,7 @@
         <div>
           <UBreadcrumb
             :items="[
-              { label: 'Публічні колекції', to: '/' },
+              { label: 'Бібліотека', to: '/library' },
               { label: collection.title },
             ]"
             class="mb-2"
@@ -36,17 +36,20 @@
           >
             {{ collection.description }}
           </p>
-          <p class="text-sm text-gray-400 mt-1">
-            {{ collection.user.name }}
-          </p>
         </div>
+        <UButton
+          v-if="isOwner"
+          icon="i-lucide-plus"
+          label="Додати елемент"
+          @click="addItem"
+        />
       </div>
 
       <div
         v-if="collection.items.length === 0"
         class="text-center py-20 text-gray-400"
       >
-        <p>Колекція порожня.</p>
+        <p>Колекція порожня. Додайте перший елемент.</p>
       </div>
 
       <div v-else class="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
@@ -55,7 +58,10 @@
           :key="item.id"
           :item="item"
           :slug="slug"
-          :isOwner="false"
+          :isOwner="isOwner"
+          base-path="/library"
+          @edit="editItem"
+          @remove="removeItem"
         />
       </div>
     </template>
@@ -63,9 +69,9 @@
 </template>
 
 <script setup lang="ts">
-import type { CollectionDetail } from "~/types/collection";
+import type { CollectionDetail, CollectionItem } from "~/types/collection";
 
-definePageMeta({ auth: false });
+definePageMeta({ auth: true });
 
 const route = useRoute();
 const slug = route.params.slug as string;
@@ -76,5 +82,31 @@ const {
   data: collection,
   status,
   error,
+  refresh,
 } = await useApi<CollectionDetail>(`/collections/${slug}`);
+
+const openCollectionItemModal = useCollectionItemModal();
+
+const { editItem, removeItem } = useCollectionItemActions({
+  get collectionId() {
+    return collection.value?.id ?? "";
+  },
+  get collectionCategory() {
+    return collection.value?.category ?? "";
+  },
+  onUpdate: refresh,
+  onRemove: () => refresh(),
+});
+
+const { isOwner } = useOwnership(() => collection.value?.user.id);
+const { backRoute } = useNavigationSource();
+
+async function addItem() {
+  if (!collection.value) return;
+  const result = await openCollectionItemModal({
+    collectionId: collection.value.id,
+    collectionCategory: collection.value.category,
+  });
+  if (result) refresh();
+}
 </script>
