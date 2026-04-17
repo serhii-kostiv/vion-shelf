@@ -155,7 +155,6 @@ const {
 useSeoMeta({ title: computed(() => item.value?.mediaItem.title ?? "Елемент") });
 
 const { isOwner } = useOwnership(() => item.value?.collection?.userId);
-const { backRoute } = useNavigationSource();
 
 const { editItem, removeItem } = useCollectionItemActions({
   get collectionId() {
