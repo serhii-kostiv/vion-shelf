@@ -18,7 +18,6 @@ export class JWTStrategy extends PassportStrategy(Strategy, 'jwt') {
 
   // Після перевірки підпису, цей метод додає дані в req.user
   validate(payload: { id: string; email: string; name: string }) {
-    console.log('payload', payload);
-    return { userId: payload.id, email: payload.email, name: payload.name };
+    return { id: payload.id, email: payload.email, name: payload.name };
   }
 }

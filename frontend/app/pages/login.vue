@@ -1,3 +1,19 @@
+<template>
+  <div class="flex flex-col items-center justify-center gap-4 p-4">
+    <UPageCard class="w-full max-w-md">
+      <UAuthForm
+        :schema="schema"
+        title="Login"
+        description="Enter your credentials to access your account."
+        icon="i-lucide-user"
+        :fields="fields"
+        :providers="providers"
+        @submit="onSubmit"
+      />
+    </UPageCard>
+  </div>
+</template>
+
 <script setup lang="ts">
 import * as z from "zod";
 import type { FormSubmitEvent, AuthFormField } from "@nuxt/ui";
@@ -64,38 +80,28 @@ type Schema = z.output<typeof schema>;
 
 async function onSubmit(payload: FormSubmitEvent<Schema>) {
   try {
-    // 1. Провайдер має називатися 'local' (якщо ти так вказав у nuxt.config)
+    // 1. Провайдер має називатися 'local' (як у nuxt.config)
     // 2. redirect: true автоматично перекине юзера на головну після успіху
     const credentials = {
       email: payload.data.email,
       password: payload.data.password,
     };
-    await signIn(credentials, { callbackUrl: "/", redirect: true });
+    await signIn(credentials, {
+      callbackUrl: "/",
+      redirect: true,
+      // Важливо для отримання cookies з refresh токеном
+      external: false,
+    });
 
     toast.add({ title: "Успіх", description: "Ви увійшли в систему" });
   } catch (error: any) {
-    // Sidebase викидає помилку, якщо статус відповіді не 2xx
+    const message =
+      error?.data?.message ?? error?.message ?? "Невірний email або пароль";
     toast.add({
       title: "Помилка входу",
-      description: "Невірний email або пароль",
+      description: Array.isArray(message) ? message.join(", ") : message,
       color: "error",
     });
   }
 }
 </script>
-
-<template>
-  <div class="flex flex-col items-center justify-center gap-4 p-4">
-    <UPageCard class="w-full max-w-md">
-      <UAuthForm
-        :schema="schema"
-        title="Login"
-        description="Enter your credentials to access your account."
-        icon="i-lucide-user"
-        :fields="fields"
-        :providers="providers"
-        @submit="onSubmit"
-      />
-    </UPageCard>
-  </div>
-</template>

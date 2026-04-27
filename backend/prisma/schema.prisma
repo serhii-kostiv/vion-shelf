@@ -7,13 +7,149 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  username  String   @unique
-  name      String
-  email     String   @unique
-  password  String
+  id            String         @id @default(uuid())
+  username      String         @unique
+  name          String
+  email         String         @unique
+  password      String
+  avatarUrl     String?        @map("avatar_url")
+  bio           String?        @db.Text
+  createdAt     DateTime       @default(now()) @map("created_at")
+  updatedAt     DateTime       @updatedAt @map("updated_at")
+  collections   Collection[]   @relation("UserCollections")
+  likes         Like[]
+  comments      Comment[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String    @map("user_id")
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userAgent String?   @map("user_agent")
+  ip        String?
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@map("refresh_tokens")
+}
+
+model Collection {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  slug        String   @unique
+  category    Category @default(MIXED)
+  isPublic    Boolean  @default(false) @map("is_public")
+
+  // Зв'язок з автором
+  userId String @map("user_id")
+  user   User   @relation("UserCollections", fields: [userId], references: [id])
+
+  // Вміст колекції
+  items CollectionItem[]
+
+  // --- СОЦІАЛЬНІ ФІЧІ ---
+  likes    Like[]
+  comments Comment[]
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  @@map("users")
+  @@index([userId])
+  @@map("collections")
+}
+
+model CollectionItem {
+  id       String     @id @default(uuid())
+  status   ItemStatus @default(PLANNED)
+  rating   Int? // Оцінка від 1 до 10
+  progress Int        @default(0) // Наприклад, сторінка або серія
+  notes    String?    @db.Text
+
+  // Зв'язок з колекцією
+  collectionId String     @map("collection_id")
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  // Глобальні дані про медіа (автор, постер і тд)
+  mediaItemId String    @map("media_item_id")
+  mediaItem   MediaItem @relation(fields: [mediaItemId], references: [id])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@unique([collectionId, mediaItemId]) // Один і той самий айтем не може бути в одній колекції двічі
+  @@index([collectionId])
+  @@index([mediaItemId])
+  @@map("collection_items")
+}
+
+model MediaItem {
+  id         String   @id @default(uuid())
+  externalId String   @unique @map("external_id") // ID з Google Books, IMDb тощо
+  type       Category
+  title      String
+  posterUrl  String?  @map("poster_url")
+  metadata   Json // JSONB для гнучких даних (автори, жанри)
+
+  items CollectionItem[] // Зворотний зв'язок
+
+  @@map("media_items")
+}
+
+model Like {
+  id           String @id @default(uuid())
+  userId       String @map("user_id")
+  collectionId String @map("collection_id")
+
+  user       User       @relation(fields: [userId], references: [id])
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  // Унікальний індекс, щоб один юзер не міг лайкнути одну колекцію двічі
+  @@unique([userId, collectionId])
+  @@index([userId])
+  @@index([collectionId])
+  @@map("likes")
+}
+
+model Comment {
+  id   String @id @default(uuid())
+  text String @db.Text
+
+  userId       String @map("user_id")
+  collectionId String @map("collection_id")
+
+  user       User       @relation(fields: [userId], references: [id])
+  collection Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@index([collectionId])
+  @@map("comments")
+}
+
+//Enums
+
+enum Category {
+  BOOKS
+  MOVIES
+  ANIME
+  MANGA
+  GAMES
+  COURSES
+  MIXED
+}
+
+enum ItemStatus {
+  PLANNED
+  IN_PROGRESS
+  COMPLETED
+  DROPPED
 }
