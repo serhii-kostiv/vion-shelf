@@ -18,6 +18,9 @@ export interface SearchResult {
 
   /** Release year for movies/shows, publication year for books */
   releaseYear?: number;
+
+  /** Optional metadata already available from search (avoids extra getDetails call) */
+  metadata?: Record<string, unknown>;
 }
 
 /**

@@ -1,8 +1,8 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { Category } from '@prisma/client';
-import { GoogleBooksProvider } from './providers/google-books.provider';
-import { TmdbProviderService } from './providers/tmdb-provider.service';
-import { SearchProvider } from './providers/search-provider.interface';
+import { GoogleBooksService } from './adapters/google-books.service';
+import { TmdbProviderService } from './adapters/tmdb-provider.service';
+import { SearchProvider } from './adapters/search-provider.interface';
 import { SearchQueryDto } from './dto/search-query.dto';
 import { SearchResultDto } from './dto/search-result.dto';
 
@@ -11,21 +11,18 @@ export class SearchService {
   private readonly providers = new Map<string, SearchProvider>();
 
   constructor(
-    private readonly googleBooksProvider: GoogleBooksProvider,
+    private readonly googleBooksService: GoogleBooksService,
     private readonly tmdbProvider: TmdbProviderService,
   ) {
-    // Register providers in the Map for strategy pattern
-    // Note: GoogleBooksProvider doesn't implement SearchProvider interface yet,
-    // so we only register TMDB for now
+    this.providers.set('google-books', this.googleBooksService);
     this.providers.set('tmdb', this.tmdbProvider);
   }
 
   async search(dto: SearchQueryDto): Promise<SearchResultDto[]> {
-    const { query, type, limit = 10, provider = 'default' } = dto;
+    const { query, type, provider = 'default' } = dto;
 
-    // Strategy pattern: select provider based on type and provider parameter
+    // Явно вказаний провайдер
     if (provider !== 'default') {
-      // Use explicitly specified provider
       if (!type) {
         throw new BadRequestException(
           'Type is required when using a specific provider',
@@ -34,16 +31,15 @@ export class SearchService {
       return this.searchWithProvider(query, type, provider);
     }
 
-    // Default behavior: route by type
+    // Роутинг по типу
     if (!type || type === Category.MIXED || type === Category.BOOKS) {
-      return await this.googleBooksProvider.search(query, limit);
+      return this.searchWithProvider(query, Category.BOOKS, 'google-books');
     }
 
     if (type === Category.MOVIES || type === Category.ANIME) {
       return this.searchWithProvider(query, type, 'tmdb');
     }
 
-    // Інші типи поки не підтримуються
     if (type === Category.MANGA) {
       throw new BadRequestException('Manga search not implemented yet');
     }
@@ -77,17 +73,21 @@ export class SearchService {
       throw new BadRequestException(`Unknown provider: ${providerName}`);
     }
 
-    // Use the provider's search method (SearchProvider interface)
     const results = await provider.search(query, type);
 
-    // Transform SearchResult[] to SearchResultDto[]
     return results.map((result) => ({
       externalId: result.externalId,
       type: result.type,
       title: result.title,
       posterUrl: result.posterUrl,
       metadata: {
-        releaseYear: result.releaseYear,
+        ...(result.metadata ?? {}),
+        ...(result.releaseYear !== undefined
+          ? {
+              publishedYear: result.releaseYear,
+              releaseYear: result.releaseYear,
+            }
+          : {}),
       },
     }));
   }

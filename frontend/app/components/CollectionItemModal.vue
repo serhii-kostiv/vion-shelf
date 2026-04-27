@@ -12,10 +12,40 @@
       >
         <UFormField label="Назва" name="mediaItem.title" required>
           <UInput
+            v-if="item"
             v-model="form.mediaItem.title"
             placeholder="Наприклад: One Piece"
             class="w-full"
           />
+          <UInputMenu
+            v-else
+            :key="inputMenuKey"
+            v-model:search-term="searchQuery"
+            :model-value="selectedSearchItem"
+            :items="searchResults"
+            :loading="searchLoading"
+            :ignore-filter="true"
+            :reset-search-term-on-select="false"
+            open-on-click
+            placeholder="Наприклад: One Piece"
+            class="w-full"
+            @update:model-value="onSelectSearchItem"
+            @update:search-term="onSearchTermUpdate"
+          >
+            <template #item="{ item }">
+              <template v-if="item.metadata?._manual">
+                <UIcon
+                  name="i-lucide-pencil"
+                  class="w-4 h-4 text-gray-400 shrink-0"
+                />
+                <span class="text-gray-500 ml-2">Додати вручну:</span>
+                <span class="ml-1 font-medium truncate">{{ item.label }}</span>
+              </template>
+              <template v-else>
+                <span class="truncate">{{ item.label }}</span>
+              </template>
+            </template>
+          </UInputMenu>
         </UFormField>
 
         <template v-if="!item">
@@ -156,6 +186,13 @@
             color="neutral"
             variant="outline"
             @click="emits('close')"
+          />
+          <UButton
+            label="Очистити"
+            color="neutral"
+            variant="ghost"
+            icon="i-lucide-rotate-ccw"
+            @click="clearForm"
           />
           <UButton
             type="submit"
@@ -308,6 +345,135 @@ const emits = defineEmits<{
 const loading = ref(false);
 const apiFetch = useApiFetch();
 
+// --- Search ---
+interface SearchItem {
+  label: string;
+  externalId: string;
+  posterUrl?: string;
+  metadata: Record<string, unknown>;
+}
+
+const searchQuery = ref(props.item?.mediaItem.title ?? "");
+const selectedSearchItem = ref<SearchItem | undefined>(undefined);
+const searchResultsRaw = ref<SearchItem[]>([]);
+const searchLoading = ref(false);
+const inputMenuKey = ref(0);
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+// Завжди першим елементом — "Додати вручну", далі результати пошуку
+const searchResults = computed<SearchItem[]>(() => {
+  if (!searchQuery.value?.trim()) return [];
+  const manualItem: SearchItem = {
+    label: searchQuery.value,
+    externalId: `manual-${Date.now()}`,
+    posterUrl: undefined,
+    metadata: { _manual: true },
+  };
+  return [manualItem, ...searchResultsRaw.value];
+});
+
+function clearForm() {
+  selectedSearchItem.value = undefined;
+  searchResultsRaw.value = [];
+  searchQuery.value = "";
+  form.mediaItem.title = "";
+  form.mediaItem.externalId = "";
+  form.mediaItem.posterUrl = "";
+  form.mediaItem.metadata = {};
+  customMetadataEntries.value = [];
+  form.collectionItem.status = "PLANNED";
+  form.collectionItem.rating = null;
+  form.collectionItem.progress = 0;
+  form.collectionItem.notes = "";
+  // Перемонтовуємо UInputMenu після завершення поточного циклу оновлення
+  nextTick(() => {
+    inputMenuKey.value++;
+  });
+}
+
+function onSelectSearchItem(item: SearchItem | string | undefined) {
+  if (!item) return;
+
+  if (typeof item === "string") {
+    form.mediaItem.title = item;
+    searchQuery.value = item;
+    return;
+  }
+
+  // Ручне введення — тільки заповнюємо назву, решту вручну
+  if (item.metadata._manual) {
+    selectedSearchItem.value = item;
+    form.mediaItem.title = item.label;
+    form.mediaItem.externalId = `manual-${Date.now()}`;
+    form.mediaItem.posterUrl = "";
+    form.mediaItem.metadata = {};
+    return;
+  }
+
+  selectedSearchItem.value = item;
+  searchQuery.value = item.label;
+  form.mediaItem.title = item.label;
+  form.mediaItem.externalId = item.externalId;
+  form.mediaItem.posterUrl = item.posterUrl ?? "";
+  form.mediaItem.metadata = Object.fromEntries(
+    Object.entries(item.metadata)
+      .filter(([k]) => k !== "_manual")
+      .map(([k, v]) => [
+        k,
+        Array.isArray(v) ? (v as string[]).join(", ") : (v as string | number),
+      ]),
+  );
+}
+
+function onSearchTermUpdate(value: string | undefined) {
+  const val = value ?? "";
+
+  if (selectedSearchItem.value && selectedSearchItem.value.label === val) {
+    return;
+  }
+
+  nextTick(() => {
+    if (selectedSearchItem.value) return;
+
+    form.mediaItem.title = val;
+    form.mediaItem.externalId = "";
+
+    if (searchDebounceTimer) clearTimeout(searchDebounceTimer);
+    if (!val.trim()) {
+      searchResultsRaw.value = [];
+      return;
+    }
+
+    searchDebounceTimer = setTimeout(() => onSearch(val), 400);
+  });
+}
+
+async function onSearch(query: string) {
+  searchLoading.value = true;
+  try {
+    const type = form.mediaItem.type;
+    const res = await apiFetch<
+      {
+        externalId: string;
+        title: string;
+        posterUrl?: string;
+        metadata: Record<string, unknown>;
+      }[]
+    >(`/search?query=${encodeURIComponent(query)}&type=${type}`);
+
+    searchResultsRaw.value = res.map((r) => ({
+      label: r.title,
+      externalId: r.externalId,
+      posterUrl: r.posterUrl,
+      metadata: r.metadata,
+    }));
+  } catch {
+    searchResultsRaw.value = [];
+  } finally {
+    searchLoading.value = false;
+  }
+}
+
 const allCategoryOptions = [
   { label: "Книги", value: "BOOKS" },
   { label: "Фільми", value: "MOVIES" },
@@ -382,6 +548,7 @@ watch(
   () => {
     form.mediaItem.metadata = {};
     customMetadataEntries.value = [];
+    searchResultsRaw.value = [];
   },
 );
 
